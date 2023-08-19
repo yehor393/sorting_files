@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-
 images_files = list()
 video_files = list()
 documents_files = list()
@@ -24,29 +23,51 @@ registered_extensions = {
 
     "GZ": archives_files, "TAR": archives_files, "ZIP": archives_files,
     '': unknown
-
 }
 
+
 def get_extensions(file_name):
+    """
+    Extracts the file extension from the given file name and converts it to uppercase.
+
+    :param file_name: The name of the file.
+    :return: The uppercase file extension.
+    """
     return Path(file_name).suffix[1:].upper()
 
+
 def scan(folder):
+    """
+    This function iterates through the items within the specified folder. If an item is a directory,
+    it recursively scans its subdirectories. If an item is a file, it uses the `get_extensions`
+    function to extract its file extension. The file is then categorized into appropriate lists
+    based on its extension, using the `registered_extensions` dictionary. The function also keeps
+    track of different file extensions in the `extensions` set.
+
+    :param folder:
+    :return:
+    """
     for item in folder.iterdir():
         if item.is_dir():
-            if item.name not in("Images", "Documents", "Audio", "Video", "Archives", "Others", "Unknown"):
+            # If the item is a directory and not one of the special folders, continue scanning
+            if item.name not in ("Images", "Documents", "Audio", "Video", "Archives", "Others", "Unknown"):
                 folders.append(item)
                 scan(item)
             continue
 
+        # Get the file extension using the `get_extensions` function
         extension = get_extensions(file_name=item.name)
-        new_name = folder/item.name                                     #Link to item.name in folder what we give
+        new_name = folder / item.name
         try:
-            container = registered_extensions[extension]            #container = one item of dir
+            # Use the `registered_extensions` dictionary to categorize the file
+            container = registered_extensions[extension]
             extensions.add(extension)
-            container.append(new_name)                              #where? and what?
+            container.append(new_name)
         except KeyError:
+            # If the extension is not found in the dictionary, categorize it as 'Others'
             others.append(new_name)
             extensions.add(extension)
+
 
 if __name__ == '__main__':
     path = sys.argv[1]

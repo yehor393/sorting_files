@@ -1,5 +1,6 @@
 import shutil
 import sys
+import threading
 
 import scan
 import normalize
@@ -106,48 +107,52 @@ def get_folder_object(root_path):
                 pass
 
 
-def main(folder_path):
-    """
-    Organize files within a specified folder by categorizing and moving them to appropriate subfolders.
-
-    This function orchestrates the entire organization process. It first uses the 'scan' module to identify different
-    types of files and their extensions within the specified folder. Then, it iterates through each categorized list
-    of files (images, documents, audio, video, others, unknown, archives).
-
-    :param folder_path: The path to the folder containing the unorganized files.
-    :return: None
-    """
+def process_folder(folder_path):
     scan.scan(folder_path)
 
-    for file in scan.images_files:
-        file = Path(file)
-        handle_file(file, folder_path, "Images")
+    threads = []
 
-    for file in scan.documents_files:
-        file = Path(file)
-        handle_file(file, folder_path, "Documents")
+    for file in (scan.images_files +
+                 scan.documents_files +
+                 scan.audio_files +
+                 scan.video_files +
+                 scan.others +
+                 scan.unknown):
+        file_path = Path(file)
+        dist_folder = None
 
-    for file in scan.audio_files:
-        file = Path(file)
-        handle_file(file, folder_path, "Audio")
+        if file in scan.images_files:
+            dist_folder = "Images"
+        elif file in scan.documents_files:
+            dist_folder = "Documents"
+        elif file in scan.audio_files:
+            dist_folder = "Audio"
+        elif file in scan.video_files:
+            dist_folder = "Video"
+        elif file in scan.others:
+            dist_folder = "Others"
+        elif file in scan.unknown:
+            dist_folder = "Unknown"
 
-    for file in scan.video_files:
-        file = Path(file)
-        handle_file(file, folder_path, "Video")
-
-    for file in scan.others:
-        file = Path(file)
-        handle_file(file, folder_path, "Others")
-
-    for file in scan.unknown:
-        file = Path(file)
-        handle_file(file, folder_path, "Unknown")
+        thread = threading.Thread(target=handle_file, args=(file_path, folder_path, dist_folder))
+        threads.append(thread)
+        thread.start()
 
     for file in scan.archives_files:
-        file = Path(file)
-        handle_archive(file, folder_path)
+        file_path = Path(file)
+        thread = threading.Thread(target=handle_archive, args=(file_path, folder_path))
+        threads.append(thread)
+        thread.start()
 
-        get_folder_object(folder_path)
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join()
+
+    get_folder_object(folder_path)
+
+
+def main(folder_path):
+    process_folder(folder_path)
 
 
 if __name__ == '__main__':
